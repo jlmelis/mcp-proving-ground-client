@@ -84,6 +84,10 @@ def render_chat():
         
         with st.chat_message("assistant"):
             try:
+                # Show initial thinking indicator
+                thinking_placeholder = st.empty()
+                thinking_placeholder.markdown("▌")  # Blinking cursor
+                
                 client = OpenAI(
                     base_url=PROVIDER_CONFIG[st.session_state.provider]["base_url"],
                     api_key=st.session_state.api_key
@@ -95,17 +99,28 @@ def render_chat():
                     stream=True
                 )
                 
-                response = st.write_stream(
-                    chunk.choices[0].delta.content for chunk in stream 
-                    if chunk.choices[0].delta.content
-                )
+                full_response = []
+                response_container = st.empty()
+                
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        # Clear thinking indicator on first content
+                        if not full_response:
+                            thinking_placeholder.empty()
+                        full_response.append(chunk.choices[0].delta.content)
+                        # Show text with blinking cursor during stream
+                        response_container.markdown("".join(full_response) + "▌")
+                
+                # Finalize without cursor
+                response_container.markdown("".join(full_response))
                 
                 st.session_state.messages.append({
                     "role": "assistant", 
-                    "content": response
+                    "content": "".join(full_response)
                 })
                 
             except Exception as e:
+                thinking_placeholder.empty()
                 st.error(f"❌ Error: {str(e)}")
                 st.session_state.messages.pop()
 
