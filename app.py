@@ -4,23 +4,23 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
  # Load environment variables
- load_dotenv()
+load_dotenv()
 
- # Provider configuration
- PROVIDER_CONFIG = {
-     "Deepseek": {
-         "base_url": "https://api.deepseek.com/v1",
-         "models": ["deepseek-chat", "deepseek-coder"],
-         "key_env": "DEEPSEEK_API_KEY",
-         "default_key": os.getenv("DEEPSEEK_API_KEY", "")
-     },
-     "OpenAI": {
-         "base_url": "https://api.openai.com/v1",
-         "models": ["gpt-4-turbo", "gpt-3.5-turbo"],
-         "key_env": "OPENAI_API_KEY",
-         "default_key": os.getenv("OPENAI_API_KEY", "")
-     }
- }
+# Provider configuration
+PROVIDER_CONFIG = {
+    "Deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "models": ["deepseek-chat", "deepseek-coder"],
+        "key_env": "DEEPSEEK_API_KEY",
+        "default_key": os.getenv("DEEPSEEK_API_KEY", "")
+    },
+    "OpenAI": {
+        "base_url": "https://api.openai.com/v1",
+        "models": ["gpt-4-turbo", "gpt-3.5-turbo"],
+        "key_env": "OPENAI_API_KEY",
+        "default_key": os.getenv("OPENAI_API_KEY", "")
+    }
+}
 
 def initialize_session():
     """Initialize session state variables"""
