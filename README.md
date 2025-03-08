@@ -1,8 +1,8 @@
-# MCP Client
+# MCP Proving Ground Client
 
 ## Overview
 
-The MCP Client is a Python-based client for interacting with the MCP API. This project is primarily being developed to provide a simple MCP Client that can be used to test custom MCP servers, helping to avoid message limits encountered with other clients like Claude Desktop.
+The MCP Proving Ground Client is a Python-based client for interacting with the MCP API. This project is primarily being developed to provide a simple MCP Client that can be used to test custom MCP servers, helping to avoid message limits encountered with other clients like Claude Desktop.
 
 ## Installation
 
