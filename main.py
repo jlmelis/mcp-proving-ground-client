@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from lib.mcp_client import MCPClient
 
 # Configure logging
 logs_dir = Path('logs')
@@ -18,7 +19,6 @@ from dotenv import load_dotenv
 
 load_dotenv()  # load environment variables from .env
 
-from models.mcp_client import MCPClient
 
 async def main():
     client = MCPClient()
