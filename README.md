@@ -11,6 +11,10 @@ The MCP Client is a Python-based client for interacting with the MCP API. This p
 3. Run `uv venv` to create a virtual environment
 4. Activate the virtual environment
 5. Run `uv pip install -r requirements.txt`
+6. Create a `.env` file and add your Deepseek API key:
+   ```bash
+   DEEPSEEK_API_KEY=your_api_key_here
+   ```
 
 ## Usage
 

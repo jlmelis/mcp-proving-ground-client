@@ -11,7 +11,6 @@ __pycache__/
 # Environments
 venv/
 env/
-.env
 .venv
 
 # IDEs
@@ -38,3 +37,4 @@ htmlcov/
 # Miscellaneous
 .DS_Store
 Thumbs.db
+.env
