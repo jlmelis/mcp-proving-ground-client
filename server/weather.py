@@ -1,6 +1,15 @@
 from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
+import logging
+
+# Initialize logging
+logging.basicConfig(
+    filename='logs/weather.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP("weather")

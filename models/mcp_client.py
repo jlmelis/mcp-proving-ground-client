@@ -93,7 +93,7 @@ class MCPClient:
         final_text: List[str] = []
 
         for tool_call in tool_calls:
-            print(f"Tool call detected: {tool_call.function.name}")
+            
             tool_name: str = tool_call.function.name
             tool_args: Dict[str, Any] = (
                 json.loads(tool_call.function.arguments)

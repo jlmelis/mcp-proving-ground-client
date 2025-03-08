@@ -1,1 +1,40 @@
 .aider*
+/logs
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Environments
+venv/
+env/
+.env
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.swp
+
+# Build and distribution
+build/
+dist/
+*.egg
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Test and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
