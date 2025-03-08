@@ -1,9 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-
-
-from dotenv import load_dotenv
+import sys
 
 # Configure logging
 logs_dir = Path('logs')
@@ -16,6 +14,8 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+from dotenv import load_dotenv
 
 load_dotenv()  # load environment variables from .env
 
@@ -36,5 +36,4 @@ async def main():
         await client.cleanup()
 
 if __name__ == "__main__":
-    import sys
     asyncio.run(main())

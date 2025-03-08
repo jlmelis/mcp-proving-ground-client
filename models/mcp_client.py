@@ -218,19 +218,40 @@ class MCPClient:
 
         Continuously prompts for user input and processes queries until 'quit' is entered.
         """
+        import sys
+        import time
+        from itertools import cycle
+        from threading import Thread, Event
+
+        def spinner(stop_event):
+            for frame in cycle(['|', '/', '-', '\\']):
+                if stop_event.is_set():
+                    break
+                sys.stdout.write(f'\rWaiting for response {frame}')
+                sys.stdout.flush()
+                time.sleep(0.1)
+            sys.stdout.write('\r' + ' ' * 20 + '\r')
+
         print("\nMCP Client Started!")
         print("Type your queries or 'quit' to exit.")
-        
+
         while True:
             try:
-                query: str = input("\nQuery: ").strip()
-                
+                query: str = input("\n\033[1;32mYou:\033[0m ").strip()
+
                 if query.lower() == 'quit':
                     break
-                    
+
+                stop_event = Event()
+                spinner_thread = Thread(target=spinner, args=(stop_event,))
+                spinner_thread.start()
+
                 response: str = await self.process_query(query)
-                print("\n" + response)
-                    
+                stop_event.set()
+                spinner_thread.join()
+
+                print(f'\033[1;34mMCP:\033[0m {response}')
+
             except Exception as e:
                 print(f"\nError: {str(e)}")
     
