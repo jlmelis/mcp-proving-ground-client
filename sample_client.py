@@ -1,12 +1,14 @@
 import asyncio
 from typing import Optional
 from contextlib import AsyncExitStack
+import json
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from anthropic import Anthropic
+from openai import OpenAI
 from dotenv import load_dotenv
+import os
 
 load_dotenv()  # load environment variables from .env
 
@@ -15,7 +17,10 @@ class MCPClient:
         # Initialize session and client objects
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
-        self.anthropic = Anthropic()
+        self.client = OpenAI(
+                    base_url="https://api.deepseek.com/v1",
+                    api_key=os.getenv("DEEPSEEK_API_KEY")
+                )
 
     async def connect_to_server(self, server_script_path: str):
         """Connect to an MCP server
@@ -26,12 +31,15 @@ class MCPClient:
         is_python = server_script_path.endswith('.py')
         is_js = server_script_path.endswith('.js')
         if not (is_python or is_js):
-            raise ValueError("Server script must be a .py or .js file")
+            raise ValueError("Server script must be a .py or .js file" + server_script_path)
             
-        command = "python" if is_python else "node"
+        command = "uv" if is_python else "node"
         server_params = StdioServerParameters(
             command=command,
-            args=[server_script_path],
+            args=[
+                "run",
+                server_script_path
+            ],
             env=None
         )
         
@@ -56,55 +64,79 @@ class MCPClient:
         ]
 
         response = await self.session.list_tools()
-        available_tools = [{ 
+        
+        mcp_tools = [{ 
             "name": tool.name,
             "description": tool.description,
             "input_schema": tool.inputSchema
         } for tool in response.tools]
 
-        # Initial Claude API call
-        response = self.anthropic.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1000,
+        available_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": tool['name'],
+                "description": tool['description'],
+                "parameters": tool['input_schema']
+            }
+        }
+        for tool in mcp_tools
+] 
+
+        first_response = self.client.chat.completions.create(
+            model="deepseek-chat",
             messages=messages,
             tools=available_tools
         )
 
+        
         # Process response and handle tool calls
         tool_results = []
         final_text = []
 
-        for content in response.content:
-            if content.type == 'text':
-                final_text.append(content.text)
-            elif content.type == 'tool_use':
-                tool_name = content.name
-                tool_args = content.input
-                
+        stop_reason = (
+            "tool_calls"
+            if first_response.choices[0].message.tool_calls is not None
+            else first_response.choices[0].finish_reason
+        )
+        
+        if stop_reason == "stop":
+            final_text.append(first_response.choices[0].message.content)
+        elif stop_reason == "tool_calls":
+            #handle tool calls
+            for tool_call in first_response.choices[0].message.tool_calls:
+                print(f"Tool call detected: {tool_call.function.name}")
+                tool_name = tool_call.function.name
+                tool_args = arguments = (
+                    json.loads(tool_call.function.arguments)
+                    if isinstance(tool_call.function.arguments, str)
+                    else tool_call.function.arguments
+                )
+
                 # Execute tool call
                 result = await self.session.call_tool(tool_name, tool_args)
                 tool_results.append({"call": tool_name, "result": result})
                 final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
-
-                # Continue conversation with tool results
-                if hasattr(content, 'text') and content.text:
-                    messages.append({
-                      "role": "assistant",
-                      "content": content.text
-                    })
+                
+                
+                messages.append({
+                    "role": "assistant",
+                    "content": first_response.choices[0].message.content
+                })
                 messages.append({
                     "role": "user", 
-                    "content": result.content
+                    "content": json.dumps(result.content[0].text) if result.content and len(result.content) > 0 and hasattr(result.content[0], 'text') else ""
                 })
-
-                # Get next response from Claude
-                response = self.anthropic.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=1000,
+            
+                response = self.client.chat.completions.create(
+                    model="deepseek-chat",
                     messages=messages,
                 )
 
-                final_text.append(response.content[0].text)
+                final_text.append(response.choices[0].message.content)
+        else:
+            raise ValueError(f"Unknown stop reason: {stop_reason}")
+
 
         return "\n".join(final_text)
 
