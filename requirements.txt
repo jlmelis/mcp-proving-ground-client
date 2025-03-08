@@ -1,0 +1,7 @@
+pyyaml==6.0.2
+mcp
+httpx
+openai
+python-dotenv
+
+

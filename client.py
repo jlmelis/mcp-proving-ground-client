@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from pathlib import Path
-import sys
 
 # Configure logging
 logs_dir = Path('logs')
