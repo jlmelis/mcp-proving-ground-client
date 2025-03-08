@@ -28,6 +28,10 @@ uv run main.py
 
 Edit `config.yaml` to configure the MCP Server.
 
+## Sample Server
+
+A sample server `weather.py` is included in this repository, based on the quickstart example from the [Model Context Protocol documentation](https://modelcontextprotocol.io/quickstart/server). This server demonstrates basic MCP server functionality and can be used for testing and experimentation.
+
 ## Development Status
 
 This project is currently in early active development. There may be bugs, missing features, and breaking changes. Please report any issues you encounter.
