@@ -22,13 +22,9 @@ load_dotenv()  # load environment variables from .env
 from models.mcp_client import MCPClient
 
 async def main():
-    if len(sys.argv) < 2:
-        logger.error("Usage: python client.py <path_to_server_script>")
-        sys.exit(1)
-        
     client = MCPClient()
     try:
-        await client.connect_to_server(sys.argv[1])
+        await client.connect_to_server()
         await client.chat_loop()
     except Exception as e:
         logger.error(f"An error occurred: {e}")

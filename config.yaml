@@ -1,0 +1,13 @@
+# MCP Client Configuration
+server:
+  # Server parameters configuration
+  command: uv
+  args:
+    - run
+    - server/weather.py
+  env: null
+  timeout: 30
+
+  # Script type detection
+  python_ext: .py
+  js_ext: .js

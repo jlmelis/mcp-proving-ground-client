@@ -2,6 +2,8 @@ import asyncio
 from typing import Optional, List, Dict, Any
 from contextlib import AsyncExitStack
 import json
+import yaml
+from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -29,6 +31,11 @@ class MCPClient:
         Raises:
             APIConnectionError: If the DEEPSEEK_API_KEY environment variable is not set
         """
+        # Load configuration
+        config_path = Path(__file__).parent.parent / 'config.yaml'
+        with open(config_path) as f:
+            self.config = yaml.safe_load(f)
+
         # Initialize session and client objects
         self.session: Optional[ClientSession] = None
         self.exit_stack: AsyncExitStack = AsyncExitStack()
@@ -40,29 +47,35 @@ class MCPClient:
                     api_key=api_key
                 )
 
-    async def connect_to_server(self, server_script_path: str) -> None:
+    async def connect_to_server(self, script_path: str = None) -> None:
         """Connect to an MCP server.
 
         Args:
-            server_script_path (str): Path to the server script (.py or .js)
+            script_path (str): Path to the server script (.py or .js)
 
         Raises:
             InvalidServerScriptError: If the server script path is invalid
             APIConnectionError: If there is an issue connecting to the API
         """
-        is_python = server_script_path.endswith('.py')
-        is_js = server_script_path.endswith('.js')
+        # Use provided script path or config value
+        script_path = script_path or self.config['server']['args'][-1]
+        if not script_path:
+            raise ValueError('Server script path must be provided either via command line or config file')
+
+        # Determine script type
+        is_python = script_path.endswith(self.config['server']['python_ext'])
+        is_js = script_path.endswith(self.config['server']['js_ext'])
         if not (is_python or is_js):
-            raise InvalidServerScriptError("Server script must be a .py or .js file: " + server_script_path)
-            
-        command = "uv" if is_python else "node"
+            raise InvalidServerScriptError(f"Server script must be a {self.config['server']['python_ext']} or {self.config['server']['js_ext']} file: {script_path}")
+
+        # Update script path in args
+        args = self.config['server']['args'].copy()
+        args[-1] = script_path
+
         server_params = StdioServerParameters(
-            command=command,
-            args=[
-                "run",
-                server_script_path
-            ],
-            env=None
+            command=self.config['server']['command'],
+            args=args,
+            env=self.config['server']['env']
         )
         
         try:
