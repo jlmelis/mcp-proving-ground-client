@@ -13,6 +13,10 @@ logging.basicConfig(
         logging.FileHandler(logs_dir / 'client.log')
     ]
 )
+
+# Disable logging from httpx
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv

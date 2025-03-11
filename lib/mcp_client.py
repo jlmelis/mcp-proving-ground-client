@@ -3,6 +3,7 @@ from contextlib import AsyncExitStack
 import json
 import yaml
 from pathlib import Path
+import logging
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -11,6 +12,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 from anthropic import Anthropic
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 load_dotenv()  # load environment variables from .env
 
@@ -104,8 +108,8 @@ class MCPClient:
             # List available tools
             response = await self.session.list_tools()
             tools = response.tools
-            print("\nConnected to server with tools:", [tool.name for tool in tools])
-            print(f"Using {self.active_api.capitalize()} API")
+            logging.info("\nConnected to server with tools: %s", [tool.name for tool in tools])
+            logging.info("Using %s API", self.active_api.capitalize())
         except Exception as e:
             raise APIConnectionError(f"Failed to connect to server: {str(e)}")
 
@@ -123,8 +127,9 @@ class MCPClient:
         final_text: List[str] = []
 
         # Debug the tool_calls structure
-        print(f"Tool calls type: {type(tool_calls)}")
-        print(f"Tool calls structure: {dir(tool_calls) if hasattr(tool_calls, '__dir__') else 'No dir available'}")
+        logging.debug("Tool calls type: %s", type(tool_calls))
+        logging.debug("Tool calls structure: %s",
+                      dir(tool_calls) if hasattr(tool_calls, '__dir__') else 'No dir available')
 
         # Handle different formats between Deepseek and Anthropic
         if not isinstance(tool_calls, list):
@@ -133,10 +138,10 @@ class MCPClient:
                 if hasattr(tool_calls, 'items') and callable(tool_calls.items):
                     tool_calls = [tool_calls]
                 else:
-                    print(f"Unexpected tool_calls format: {tool_calls}")
+                    logging.warning("Unexpected tool_calls format: %s", tool_calls)
                     return ["[Error: Unexpected tool_calls format]"]
             except Exception as e:
-                print(f"Error processing tool_calls: {str(e)}")
+                logging.error("Error processing tool_calls: %s", str(e))
                 return [f"[Error processing tool_calls: {str(e)}]"]
 
         for tool_call in tool_calls:
@@ -156,7 +161,7 @@ class MCPClient:
                     elif hasattr(tool_call, 'function') and hasattr(tool_call.function, 'name'):
                         tool_name = tool_call.function.name
                     else:
-                        print(f"Could not find tool name in: {tool_call}")
+                        logging.warning("Could not find tool name in: %s", tool_call)
                         continue
 
                     if hasattr(tool_call, 'input'):
@@ -168,13 +173,13 @@ class MCPClient:
                             else tool_call.function.arguments
                         )
                     else:
-                        print(f"Could not find tool arguments in: {tool_call}")
+                        logging.warning("Could not find tool arguments in: %s", tool_call)
                         continue
                 else:
-                    print(f"Unknown API type: {self.active_api}")
+                    logging.warning("Unknown API type: %s", self.active_api)
                     continue
 
-                print(f"Executing tool: {tool_name} with args: {tool_args}")
+                logging.debug("Executing tool: %s with args: %s", tool_name, tool_args)
 
                 # Execute tool call
                 result = await self.session.call_tool(tool_name, tool_args)
@@ -214,9 +219,9 @@ class MCPClient:
                     )
                     final_text.append(response.content[0].text)
             except Exception as e:
-                print(f"Error handling tool call: {str(e)}")
+                logging.error("Error handling tool call: %s", str(e))
                 import traceback
-                traceback.print_exc()
+                logging.debug("Traceback: %s", traceback.format_exc())
                 final_text.append(f"[Error handling tool call: {str(e)}]")
 
         return final_text
@@ -269,8 +274,8 @@ class MCPClient:
                     raise ValueError(f"Unknown stop reason: {stop_reason}")
             elif self.active_api == "anthropic":
                 # Debug anthropic response structure
-                print(f"Response type: {type(first_response)}")
-                print(f"Response attributes: {dir(first_response)}")
+                logging.debug("Response type: %s", type(first_response))
+                logging.debug("Response attributes: %s", dir(first_response))
 
                 # Check for tool_calls in the Anthropic response
                 if hasattr(first_response, 'content') and first_response.content:
@@ -285,11 +290,11 @@ class MCPClient:
                         break
 
                 if tool_calls_attribute and getattr(first_response, tool_calls_attribute):
-                    print(f"Found tool calls in attribute: {tool_calls_attribute}")
+                    logging.debug("Found tool calls in attribute: %s", tool_calls_attribute)
                     tool_calls = getattr(first_response, tool_calls_attribute)
                     final_text.extend(await self._handle_tool_calls(tool_calls, messages))
                 elif not final_text:  # If we haven't added any text yet
-                    print(f"Response structure: {first_response}")
+                    logging.debug("Response structure: %s", first_response)
                     final_text.append("Received response from Anthropic API but unable to extract content.")
         except Exception as e:
             print(f"Error processing response: {str(e)}")
@@ -337,7 +342,7 @@ class MCPClient:
                     tools=available_tools
                 )
             elif self.active_api == "anthropic":
-                print("Sending request to Anthropic API with tools...")
+                logging.debug("Sending request to Anthropic API with tools...")
                 # Convert MCP tools to Anthropic tools format
                 anthropic_tools = []
 
@@ -351,7 +356,7 @@ class MCPClient:
                         }
                         anthropic_tools.append(anthropic_tool)
                     except Exception as e:
-                        print(f"Error formatting tool {tool['name']}: {str(e)}")
+                        logging.debug("Error formatting tool %s: %s", tool['name'], str(e))
 
                 try:
                     # First attempt with tools
@@ -361,16 +366,16 @@ class MCPClient:
                         messages=messages,
                         tools=anthropic_tools
                     )
-                    print("Received response from Anthropic API with tools")
+                    logging.debug("Received response from Anthropic API with tools")
                 except Exception as e:
-                    print(f"Error with tools, falling back to basic mode: {str(e)}")
+                    logging.warning("Error with tools, falling back to basic mode: %s", str(e))
                     # Fallback to no tools if the tools call fails
                     first_response = self.client.messages.create(
                         model="claude-3-7-sonnet-20250219",
                         max_tokens=4096,
                         messages=messages
                     )
-                    print("Received response from Anthropic API in fallback mode")
+                    logging.debug("Received response from Anthropic API in fallback mode")
 
             return await self._process_response(first_response, messages)
         except Exception as e:
@@ -396,6 +401,8 @@ class MCPClient:
                 time.sleep(0.1)
             sys.stdout.write('\r' + ' ' * 20 + '\r')
 
+        logging.info("\nMCP Client Started!")
+        logging.info("Using %s API", self.active_api.capitalize())
         print("\nMCP Client Started!")
         print(f"Using {self.active_api.capitalize()} API")
         print("Type your queries or 'quit' to exit. Type 'debug' for debug info.")
@@ -411,6 +418,17 @@ class MCPClient:
                     print(f"Active API: {self.active_api}")
                     print(f"Client type: {type(self.client)}")
                     print(f"Session initialized: {self.session is not None}")
+                    print("For more detailed logs, set logging level to DEBUG or type 'debug on'|'debug off'")
+                    continue
+
+                if query.lower() == 'debug on':
+                    logging.getLogger().setLevel(logging.DEBUG)
+                    print("Debug logging enabled")
+                    continue
+
+                if query.lower() == 'debug off':
+                    logging.getLogger().setLevel(logging.INFO)
+                    print("Debug logging disabled")
                     continue
 
                 stop_event = Event()
@@ -430,9 +448,10 @@ class MCPClient:
                 print(f'\033[1;34mMCP:\033[0m {response}')
 
             except Exception as e:
-                print(f"\nError in chat_loop: {str(e)}")
+                logging.error("Error in chat_loop: %s", str(e))
                 import traceback
-                traceback.print_exc()
+                logging.debug("Traceback: %s", traceback.format_exc())
+                print(f"\nError in chat_loop: {str(e)}")
 
     async def cleanup(self) -> None:
         """Clean up resources.
